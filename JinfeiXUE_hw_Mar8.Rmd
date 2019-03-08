@@ -1,0 +1,89 @@
+---
+title: "HW Mar8"
+author: "Jinfei(Fiona) Xue"
+date: "3/8/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+```{r}
+df1<-read.table("maybe_uniform.txt",header = F)
+df1<-as.matrix(df1)
+df1<-as.vector(df1)
+library(stats)
+ks.test(df1,"punif")
+hist(df1)
+```
+
+We cannot reject the hypothesis that it conforms a uniform distribution.
+
+```{r}
+x<-seq(0, 1, by=1/25)
+fx <- ifelse(x > 0 & x <=0.5, 3/2,
+   ifelse(x > 0.5 & x < 1,  0.5, 0))
+plot(x,fx)
+ks.test(fx,df1)
+```
+
+The D statistic for this model is 0.56, which is greater than 0.18 as of uniform distribution. Therefore the data fit uniform distribution better.
+
+# 2
+```{r}
+df2<-read.table("maybe_normal.txt")
+df2<-as.vector(as.matrix(df2))
+ks.test(df2,"pnorm",26,2)
+```
+
+We may have evidence of rejecting that this sample comes from a N(26,4) distribution. We should check qq plot and histogram for further convince.
+
+```{r}
+qqnorm(df2)
+qqline(df2)
+hist(df2)
+```
+
+# 3
+```{r}
+df3<-as.vector(as.matrix(read.table("maybe_same_1.txt")))
+df4<-as.vector(as.matrix(read.table("maybe_same_2.txt")))
+ks.test(df3,df4)
+```
+```{r}
+ks.test(df3+2,df4)
+```
+
+# 4
+```{r}
+df5<-readRDS("norm_sample.Rdata")
+ks.test(df5,"pnorm",0,1)
+Norm<-ecdf(df5)
+```
+
+# 5
+```{r}
+df6<-read.table("fijiquakes.dat",header = T)
+x<-df6$mag
+Fn <- ecdf(x)
+library(Hmisc)
+tot<-sum( (x<=4.9) & (x>4.3))
+binconf(tot,length(x),method="wilson",0.05)
+```
+
+```{r}
+df7<-read.table("faithful.dat",skip = 25)
+waiting<-df7$waiting
+avg<-mean(waiting)
+var<-var(waiting)
+n<-length(waiting)
+L<-round(avg-qnorm(0.95)*sqrt(var/n),3)
+U<-round(avg+qnorm(0.95)*sqrt(var/n),3)
+print(paste("the 90% CI for mean waiting time is:[",L,",",U,"]"))
+
+median(waiting)
+```
