@@ -50,11 +50,11 @@ hist(df2)
 
 # 3
 ```{r}
-df3<-as.vector(as.matrix(read.table("maybe_same_1.txt")))
-df4<-as.vector(as.matrix(read.table("maybe_same_2.txt")))
+df3<-as.numeric(as.vector(as.matrix(read.table("maybe_same_1.txt"))))
+df4<-as.numeric(as.vector(as.matrix(read.table("maybe_same_2.txt"))))
 ks.test(df3,df4)
 ```
-```{r}
+```{r, message=FALSE}
 ks.test(df3+2,df4)
 ```
 
@@ -66,7 +66,7 @@ Norm<-ecdf(df5)
 ```
 
 # 5
-```{r}
+```{r, message=FALSE}
 df6<-read.table("fijiquakes.dat",header = T)
 x<-df6$mag
 Fn <- ecdf(x)
