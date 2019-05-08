@@ -9,27 +9,224 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r library}
-
-
-
+```{r library, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(gridExtra)
+library(kableExtra)
+library(ggpubr)
+library(pwr)
+library(fitdistrplus)
 ```
 
-# Statistics and the Law
+# 1. Statistics and the Law
 
 ```{r}
+#data
+MIN<-c(20.90,23.23,23.10,30.40,42.70,62.20,39.5,38.40,26.20,55.90,49.70,44.60,36.40,32.00,10.60,34.30,42.30,26.50,51.50,47.20)
+WHITE<-c(3.7,5.5,6.7,9.0,13.9,20.6,13.4,13.2,9.3,21.0,20.1,19.1,16.0,16.0,5.6,18.4,23.3,15.6,32.4,29.7)
+acorn <- data.frame(MIN, WHITE)
+
+#Calculate effect size
+cohens_d <- function(x, y) {
+lx <- length(x) - 1
+ly <- length(y) - 1
+md <- abs(mean(x) - mean(y)) ## mean difference (numerator)
+csd <- lx * var(x) + ly * var(y)
+csd <- csd / (lx + ly)
+csd <- sqrt(csd) ## common sd computation
+cd <- md / csd ## cohen's d
+return(cd)
+}
+effect_size <- cohens_d(acorn$MIN, acorn$WHITE)
+pwr.t.test(
+n = dim(acorn)[1], effect_size,
+sig.level = 0.05, power = NULL, type = c("two.sample")
+)
+
+pwr.t.test(
+n = NULL, effect_size,
+sig.level = 0.05, power = 0.95, type = c("two.sample")
+)
+
+# Plot effect size
+# Reference: Ben's Consulting Group 4
+n <- seq(2, 50, by = 1)
+plot_effectsize <- function(n, effect_size) {
+ptab1 <- cbind(NULL)
+for (i in seq(2, 50, by = 1)) {
+pwrt1 <- pwr.t2n.test(
+n1 = i, n2 = i,
+sig.level = 0.05, power = NULL,
+d = effect_size, alternative = "two.sided"
+)
+ptab1 <- rbind(ptab1, pwrt1$power)
+}
+temp <- as.data.frame(ptab1)
+colnames(temp)[1] <- "num"
+ggplot(temp) +
+geom_line(aes(x = n, y = num, colour = "darkblue"), size = 1.5) +
+scale_color_discrete(name = "Effective size", labels = c(round(effect_size, 2))) +
+geom_hline(yintercept = 0.8, linetype = "dashed", color = "purple", size = 1.5) +
+ylab("Power") + scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+ggtitle("Two sample T test with effect size 0.86") + xlab("Group size")
+}
+plot_effectsize(n, effect_size)
+
+# Perform t-test
+t.test(acorn$MIN, acorn$WHITE)
+```
+
+*Through power analysis, we found that the power of this t test only has 0.9999818 which is not relatively high. If we want our power at least equal to 0.95, then we will only need almost 8 samples in each group which our sample size already way more than that. So the data are sufficient for us to perform t-test. The p-value of MIN vs WHITE t-tests is smaller than 0.05, which indicates that there is a discrimination between the rates of mortgage application refusals of minority applications and white applications.*
+
+# 2. Comparing Suppliers
+
+H0:They all produce about the same quality
+H1:They do not produce about the same quality
+
+```{r}
+data2 <- matrix(c(12,23,89,8,12,62,21,30,119),ncol=3,nrow = 3,byrow=TRUE)
+colnames(data2) <- c("dead","art","fly")
+rownames(data2) <- c("Area51","BDV","Giffen")
+fly <- as.table(data2)
+chisq.test(data2,correct = F)
+```
+
+*The p-value of this chi-square test is 0.8613, which is much greater than the significant level alpha=0.05. Therefore, we fail to reject the null hypothesis. The data are sufficient to show that three schools produce the same quality.*
 
 
+# 3. How deadly are sharks?
+
+```{r}
+# read data
+sharkattack <- read.csv("sharkattack.csv")
+
+# Filter US and AU shark attack records out from the original dataset
+us_shark <- sharkattack[which(sharkattack$Country.code == "US"), ]
+au_shark <- sharkattack[which(sharkattack$Country.code == "AU"), ]
+# Drop Unknown from Fatal
+us_shark <- us_shark[which(us_shark$Fatal != "UNKNOWN"), ]
+au_shark <- au_shark[which(au_shark$Fatal != "UNKNOWN"), ]
+# Create binary variable for Fatal
+us_shark$Fatal.code <- ifelse(us_shark$Fatal == "Y", 1, 0)
+au_shark$Fatal.code <- ifelse(au_shark$Fatal == "Y", 1, 0)
+# Check the size of two samples
+dim(us_shark)[1] == dim(au_shark)[1]
+
+# Calculate effect size
+# Reference: https://stackoverflow.com/questions/15436702/estimate-cohens-d-for-effect-size
+cohens_d <- function(x, y) {
+  lx <- length(x) - 1
+  ly <- length(y) - 1
+  md <- abs(mean(x) - mean(y)) ## mean difference (numerator)
+  csd <- lx * var(x) + ly * var(y)
+  csd <- csd / (lx + ly)
+  csd <- sqrt(csd) ## common sd computation
+  cd <- md / csd ## cohen's d
+}
+cohens_d(au_shark$Fatal.code, us_shark$Fatal.code)
+# Alternative way to calculate effect size
+ES.h(mean(au_shark$Fatal.code), mean(us_shark$Fatal.code))
+
+# Compute power of test
+pwr.2p2n.test(
+h = 0.4324294, n1 = dim(au_shark)[1],
+n2 = dim(us_shark)[1], sig.level = 0.05,
+alternative = "greater"
+)
+pwr.2p2n.test(
+h = 0.4137712, n1 = dim(au_shark)[1],
+n2 = dim(us_shark)[1], sig.level = 0.05,
+alternative = "greater"
+)
+
+# Two-proportions Z-test
+prop.test(
+x = c(
+  sum(au_shark$Fatal.code == 1),
+  sum(us_shark$Fatal.code == 1)
+),
+n = c(dim(au_shark)[1], dim(us_shark)[1]),
+alternative = "greater"
+)
 
 
 ```
 
-# Including Plots
+*First of all, I used two different function to calculate the effect size. Then “pwr.2p2n.test” was formed for power analysis since the sample sizes of US and AU shark attack are different. Based on that, I got 2 results of power with two different effect sizes, both of them equal to 1, which is pretty high comparatively. So we could know that the result of proportion test is reliable. The p-value of two-proportions z-test with less than 2.2e-16 indicates that we should reject the null hypothesis: the proportion of two samples are equal. In conclusion, the sharks in Australia were, on average, a more vicious lot than the sharks in the United States.*
 
-You can also embed plots, for example:
+# 4. Power analysis
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+*Arcsine transformation severs for the problem that P does not provide a scale of equal units of detectability. It uses an non-linear transformation on P so that after arcsine transforming of P, equal differences between units are equally detectable. The differences between ES index gives values whose delectability does not depend on whether the transformation of P or P itself fall around the middle or on one side of their possible range.*
+
+*Just like it is described in the book, the power to detect the difference between hypothetical parameters .65 and .45 is .48 while the power to detect the difference between hypothetical parameters .25 and .05 is .82, even though the difference between both pairs of values is .20, which means hypothetical parameters of this binomial distribution doesn not provide a scale of equal units of detectability because 0.25 and 0.05 fall into one extreme of the range.*
+
+*However, after arcsine transformation, which transforms the proportional parameter (from 0 to 1) to the scale of −π/2 to π/2. and then transformed t1 -t2 = h, which has euqal dectectability. This can solve the problem of falling into either side of the range.*
+
+# 5. Estimators
+
+## 5.1 Exponential
+
+## 5.2 A new distribution
+
+## 5.3 Rain in Southern Illinois
+
+```{r}
+# read the data
+data60 <- read.table("ill-60.txt", quote="\"", comment.char="")
+data60 <-as.numeric(as.array(data60 [,1]))
+data61 <- read.table("ill-61.txt", quote="\"", comment.char="")
+data61<-as.numeric(as.array(data61[,1]))
+data62 <- read.table("ill-62.txt", quote="\"", comment.char="")
+data62<-as.numeric(as.array(data62[,1]))
+data63<- read.table("ill-63.txt", quote="\"", comment.char="")
+data63<-as.numeric(as.array(data63[,1]))
+data64 <- read.table("ill-64.txt", quote="\"", comment.char="")
+data64<-as.numeric(as.array(data64[,1]))
+
+# explore the distribution of the rainfall data
+plotdist(data60)
+plotdist(data61)
+plotdist(data62)
+plotdist(data63)
+plotdist(data64)
+
+SumOfRain<-as.data.frame(t(c(sum(data60),sum(data61),sum(data62),sum(data63),sum(data64))))
+colnames(SumOfRain)[1:5]<-c("Total Rainfall in 1960","Total Rainfall in 1961","Total Rainfall in 1962","Total Rainfall in 1963","Total Rainfall in 1964")
+kable(SumOfRain)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+*According to the distribution plot, five years are similar. 1961 is more wetter than others since it has the highest total rainfall.*
+
+```{r}
+#Test whether the gamma distribution was a good fit for their data.
+alldata<-c(data60,data61,data62,data63,data64)
+fgamma <- fitdist(alldata, "gamma")
+plot(fgamma)
+```
+
+*According to Q-Q plot and P-P plot, the gamma distribution was a good fit for their data. I totally agree with Changnon and Hu.*
+
+```{r}
+# calculate MOM and MLE
+mom <- fitdist(alldata, "gamma",method = "mme")
+boot_mom <- bootdist(mom)
+summary(boot_mom)
+
+mle <- fitdist(alldata, "gamma",method = "mle")
+boot_mle <- bootdist(mle)
+summary(boot_mle)
+```
+
+
+*For method of moment the 95% confidence interval of shape from bootstrap sample is (0.27,0.53), the rate is (1.17,2.58). For MLE, the 95% confidence interval of shape from bootstrap sample is (0.38,0.51),the rate is (1.56,2.56). Apparently, the MLE estimates have narraow CI and thus lower variances.I would choose to present MLE as the estimator because it has lower variance.*
+
+# 6. Analysis of decision theory article
+
+
+
+
+
+
+
+
