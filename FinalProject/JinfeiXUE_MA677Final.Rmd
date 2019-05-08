@@ -2,7 +2,9 @@
 title: "MA 677 - Spring 2019, Final project"
 author: "Jinfei Xue"
 date: "5/3/2019"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -223,7 +225,42 @@ summary(boot_mle)
 
 # 6. Analysis of decision theory article
 
+Refer to:
 
+Charles F. Manski (2019) Treatment Choice with Trial data: Statistical Decision Theory Should Supplant Hypothesis Testing, The American Statistician, 73:sup1, 296-304.
+Derive equations (10a), (10b), (10c) in Section 3.2.2. Use R to reproduce the calculations in Table 1 which is explained in 3.2.3.
+
+Describe what you have done and what it means in the context the the treatment decision used as an illustration in the Manski article.
+
+For any $\delta \in [0,1]$ : $$U(\delta,P) = R[y(A)](1-\delta) + E[y(B)]\delta \\ =\alpha(1-\delta)+\beta\delta = \alpha+(\beta-\alpha)\delta$$
+
+where $\alpha \equiv E[y(A)]$ and $\beta \equiv E[y(B)]$.
+
+$$U(\delta,P,\psi) = \alpha + (\beta - \alpha)\delta(\psi)$$
+$$W(\delta,P_{s},Q_{s}) = \alpha_{s} + (\beta_{s}-\alpha_{s})E_{s}[\delta(\psi)]$$
+where $E_{s}[\delta(\psi)] \equiv \int_{\psi}\delta(\psi)dQ_{s}(\psi)$.
+
+Suppose that the success probability $\alpha \equiv P[y(A)=1]$ and not success probability $\beta \equiv P[y(B) = 1]$ , the expected wellfare of rule $\delta$ is: 
+$$W(\delta,P,N) = \alpha + (\beta-\alpha)E[\delta(n)].$$
+n is distributed binomial $B[\beta,N]$, so
+$$E[\delta(n)]=\sum_{i=0}^{N}\delta(i)f(n = i; \beta, N),$$
+where $f(n=i;\beta,N) \equiv N![i!(N-i)!]^{-1}\beta^i(1-\beta)^{N-i}$ is the probability of i successes and $\beta_s \equiv P_s[y(b)=1]$.
+
+Thus, $\delta$ is admissible if and only if 
+$$\delta(n) = 0\ for \ n<n_0$$
+$$\delta(n)=\lambda \ for\ n=n_0$$
+$$\delta(n)=1,\ for\ n>n_0.$$
+for some $0\leq n_0\leq N$ and $0\leq \lambda \leq 1$.
+
+Let $(\beta_s,s\in S) = (0,1)$ and let the prior be Beta with parameters $(c,d)$.
+
+Then the posterior mean for $\beta$ is $(c+n)/(c+d+N)$.
+
+Thus, we can drive the resulting Bayes rule is:
+
+$$\delta(n) = 0 \ for \ (c+n)/(c+d+N)<\alpha,$$
+$$\delta(n) = \lambda \ for \ (c+n)/(c+d+N)=\alpha,$$
+$$\delta(n) = 1 \ for \ (c+n)/(c+d+N)<\alpha.$$
 
 
 
